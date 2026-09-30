@@ -1,0 +1,547 @@
+% Beamer slides: Fortran Types, Expressions, and Control Flow
+
+\input{../common}
+\subtitle{Lecture 2: Fortran Types, Expressions, and Control Flow}
+
+\begin{document}
+
+% Title
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}[fragile]{Example: Triangle Area (Module + Program)}
+\begin{lstlisting}[language=Fortran]
+module triangle_operations
+  implicit none
+contains
+  function area(x, y, z)
+    real :: area ! function type
+    real, intent(in) :: x, y, z
+    real :: theta, height
+    theta = acos((x**2 + y**2 - z**2) / (2.0*x*y))
+    height = x * sin(theta)
+    area = 0.5 * y * height
+  end function area
+end module triangle_operations
+
+program triangle
+  use triangle_operations
+  implicit none
+  real :: a, b, c
+  print *, 'Welcome, please enter the lengths of the 3 sides.'
+  read *, a, b, c
+  print *, "Triangle's area:", area(a, b, c)
+end program triangle
+\end{lstlisting}
+\end{frame}
+
+
+\begin{frame}{Coding Style (Recommendations)}
+\begin{block}{Conventions}
+\begin{itemize}
+\item Always use \texttt{implicit none}.
+\item Write keywords and intrinsics in lower case; use descriptive names (\texttt{n\_planets}, not \texttt{np}).
+\item Use the symbolic relational operators (\texttt{<}, \texttt{==}, \texttt{/=}), not the legacy \texttt{.lt.}, \texttt{.eq.}, \texttt{.ne.}.
+\item Use small, consistent indentation (2–4 spaces); indent blocks and units.
+\item Include unit names in corresponding \texttt{end} statements.
+\end{itemize}
+\end{block}
+\begin{block}{Note}
+To fit code on slides, I have relaxed some conventions in teaching materials.
+\end{block}
+\end{frame}
+
+
+\begin{frame}[fragile]{Source Form (Free Form)}
+\begin{block}{Rules}
+\begin{itemize}
+\item Up to 132 characters per line.
+\item \texttt{!} introduces a comment.
+\item \texttt{\&} continues a logical line.
+\item \texttt{;} separates multiple statements on one line.
+\item Blanks are significant: they separate keywords and names (\texttt{integeri} is an error).
+\end{itemize}
+\end{block}
+\begin{block}{Example}
+\begin{lstlisting}[language=Fortran]
+a = 5.2; m_star = 1.0        ! two statements on one line
+p_years = sqrt(a**3 &        ! one statement on two lines
+               / m_star)
+\end{lstlisting}
+\end{block}
+\end{frame}
+
+\section{Types and Declarations}
+
+\begin{frame}{Intrinsic Types}
+  \begin{block}{Default Intrinsic Types}
+  \begin{itemize}
+    \item \textbf{Character}
+    \begin{itemize}
+      \item \texttt{character :: spectral\_class}
+      \item \texttt{character(len=12) :: star\_name}
+    \end{itemize}
+    \item \textbf{Logical}
+    \begin{itemize}
+      \item \texttt{logical :: is\_binary}
+    \end{itemize}
+    \item \textbf{Numeric}
+    \begin{itemize}
+      \item \texttt{integer :: n\_planets}
+      \item \texttt{real :: mass}
+      \item \texttt{complex :: visibility}
+    \end{itemize}
+  \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Literal Constants}
+  \begin{block}{Examples}
+  \begin{itemize}
+    \item Integers: \texttt{4096}
+    \item Reals: \texttt{1.0}, \texttt{1.989e30}, \texttt{-0.5}
+    \item Logical: \texttt{.false.}, \texttt{.true.}
+    \item Character: \texttt{"Barnard's Star"}, \texttt{'Barnard''s Star'} (escaped quote)
+  \end{itemize}
+  \end{block}
+  \begin{block}{Notes}
+  \begin{itemize}
+    \item Only two logical values.
+    \item Reals contain a decimal point (and may use exponential form).
+    \item Character literals may be delimited by single or double quotes.
+  \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Implicit Typing (Turn It Off)}
+  \begin{block}{Rule}
+  Without declarations, variables default to: \texttt{integer} if starting with I–N; otherwise \texttt{real}. This is error-prone (or, more plainly, stupid).
+  \end{block}
+  \begin{block}{Best Practice}
+  Always put \texttt{implicit none} immediately after any \texttt{use} statements.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Declarations (Numeric and Logical)}
+  \begin{block}{General Syntax}
+  \texttt{<type> [, <attributes>] :: <vars> [= <value>]}
+  \end{block}
+  \begin{block}{Examples}
+\begin{lstlisting}[language=Fortran]
+real :: mass
+integer :: i, j
+logical :: converged
+real, dimension(3) :: position, velocity
+integer :: n_steps = 1000
+\end{lstlisting}
+  \end{block}
+  \begin{block}{Arrays}
+  \texttt{dimension(3)} declares a three-element array (more on arrays in Lecture 3).
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Symbolic Constants (Parameters)}
+  \begin{block}{Definition}
+  Symbolic constants are declared with the \texttt{parameter} attribute.
+  \end{block}
+  \begin{block}{Examples}
+\begin{lstlisting}[language=Fortran]
+real, parameter :: pi = 3.14159
+real, parameter :: G = 6.674e-11   ! m^3 kg^-1 s^-2
+character(len=*), parameter :: host = 'Kepler-452', planet = "Kepler-452 b"
+\end{lstlisting}
+  \end{block}
+  \begin{block}{When to Use}
+  \begin{itemize}
+    \item A variable should take only one value.
+    \item To avoid “magic numbers”.
+    \item For maintainability: values may change later.
+  \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Initialisation}
+  \begin{block}{Rules}
+  Initial values may use literals or other \texttt{parameter}s.
+  \end{block}
+  \begin{block}{Examples}
+\begin{lstlisting}[language=Fortran]
+real :: distance, luminosity = 3.828e26
+integer :: n_stars = 5, n_steps = 100
+character(len=1) :: band = 'V'
+character(len=10) :: star = 'Vega'   ! right-padded with blanks
+logical :: converged = .false., verbose = .true.
+real, parameter :: pi = 3.141592, au = 1.496e11, year = 3.156e7
+real :: v_earth = 2 * pi * au / year   ! Earth's orbital speed (m/s)
+\end{lstlisting}
+  \end{block}
+  \begin{block}{Notes}
+  A subset of intrinsics are allowed in initialisation expressions (e.g., \texttt{kind}, \texttt{len}, \texttt{huge}, \texttt{tiny}, \texttt{epsilon}, etc.).
+  \end{block}
+\end{frame}
+
+\section{Expressions and Operators}
+
+\begin{frame}{Expressions}
+  \begin{block}{Types}
+  Expressions can be numeric (e.g., \texttt{2*pi*r}), character (\texttt{star // ' b'}), or logical (\texttt{is\_binary .and. converged}).
+  \end{block}
+  \begin{block}{Use}
+  Valid wherever an expression of the appropriate type is expected.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Assignment}
+  \begin{block}{Rule}
+  The left-hand side is a variable; the right-hand side is an expression. The expression is evaluated first and then converted to the type of the variable. Numeric conversion happens silently.
+  \end{block}
+  \begin{block}{Examples}
+\begin{lstlisting}[language=Fortran]
+m_total = m1 + m2
+x = r * cos(phi)                 ! cos uses radians
+planet_name = star_name // ' b'
+in_hz = (a >= a_inner .and. a <= a_outer)   ! in the habitable zone?
+n_stars = 3.7                    ! integer n_stars: truncated to 3
+\end{lstlisting}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Intrinsic Numeric Operations}
+  \begin{block}{Operators}
+  \begin{itemize}
+    \item \texttt{**} exponentiation (right-associative): \texttt{10**2}
+    \item \texttt{*}, \texttt{/} multiplication, division: \texttt{10*7/4}
+    \item \texttt{+}, \texttt{-} unary/binary plus/minus: \texttt{10+7-4}, \texttt{-3}
+  \end{itemize}
+  \end{block}
+  \begin{block}{Notes}
+  Operators apply to literals, scalars, and arrays. With arrays they act element by element, and array operands must have the same shape.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Relational Operators}
+  \begin{block}{Syntax}
+  \texttt{<}, \texttt{<=}, \texttt{==}, \texttt{/=}, \texttt{>=}, \texttt{>}\quad (legacy forms: \texttt{.lt.}, \texttt{.le.}, \texttt{.eq.}, \texttt{.ne.}, \texttt{.ge.}, \texttt{.gt.})\\
+  Note that ``not equal'' is \texttt{/=}. Writing \texttt{!=} would start a comment.
+  \end{block}
+  \begin{block}{Example}
+\begin{lstlisting}[language=Fortran]
+is_giant = (radius > 10.0)
+if (n_planets == 0) print *, 'No known planets'
+\end{lstlisting}
+  \end{block}
+  \begin{block}{Reals}
+  Avoid exact equality with reals; compare within a tolerance:
+\begin{lstlisting}[language=Fortran]
+real :: tol
+tol = 1.0e-4
+if (abs(m1 - m2) < tol) equal_mass = .true.
+\end{lstlisting}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Logical Operators}
+  \begin{block}{Operators}
+  \begin{itemize}
+    \item \texttt{.not.} — logical negation
+    \item \texttt{.and.} — conjunction
+    \item \texttt{.or.} — disjunction
+    \item \texttt{.eqv.} — equivalence (same truth value)
+    \item \texttt{.neqv.} — non-equivalence (different truth value)
+  \end{itemize}
+  \end{block}
+  \begin{block}{Truth Table Highlights}
+  \begin{itemize}
+    \item \texttt{.not. .true.} is \texttt{.false.}
+    \item \texttt{.true. .and. .false.} is \texttt{.false.}
+    \item \texttt{.true. .or. .false.} is \texttt{.true.}
+  \end{itemize}
+  \end{block}
+\end{frame}
+
+\section{Control Flow}
+
+\begin{frame}{Control Flow}
+  \begin{block}{Overview}
+    Control constructs allow the normal sequential order of execution to be changed. Fortran supports:
+    \begin{itemize}
+      \item Conditional execution: \texttt{if}, \texttt{if ... then ... else}, \texttt{select case}
+      \item Loops: \texttt{do}, \texttt{do while}
+      \item Loop control: \texttt{exit}, \texttt{cycle}
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{\texttt{if} Statement}
+  \begin{block}{Syntax}
+    \texttt{if (logical-expression) exec-stmt}
+  \end{block}
+  \begin{block}{Example}
+\begin{lstlisting}[language=Fortran]
+if (flux > flux_max) flux_max = flux
+if (b_mag - v_mag > 1.0) is_red = .true.
+if (n_obs > 0) mean_flux = total_flux / n_obs
+\end{lstlisting}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Block \texttt{if}}
+  \begin{block}{Example}
+\begin{lstlisting}[language=Fortran]
+if (e < 1.0) then
+  print *, "Elliptical orbit (bound)"
+else if (e > 1.0) then
+  print *, "Hyperbolic orbit (unbound)"
+else
+  print *, "Parabolic orbit"
+end if
+\end{lstlisting}
+  \end{block}
+  \begin{block}{Notes}
+    Both \texttt{else} and \texttt{else if} are optional. Indentation improves readability.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{\texttt{select case}}
+  \begin{block}{Example}
+\begin{lstlisting}[language=Fortran]
+select case (n_planets)
+case (0)
+  print *, "No known planets"
+case (1)
+  print *, "Single-planet system"
+case (2:7)
+  print *, "Multi-planet system"
+case (8:)
+  print *, "At least as many planets as the Solar System"
+case default
+  print *, "Invalid planet count"
+end select
+\end{lstlisting}
+  \end{block}
+  \begin{block}{Notes}
+    Cleaner and often more efficient than nested \texttt{if}s.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Indexed \texttt{do} Loops}
+  \begin{block}{Example}
+\begin{lstlisting}[language=Fortran]
+do i = 1, 100, 1
+  ...
+end do
+\end{lstlisting}
+  \end{block}
+  \begin{block}{Syntax}
+    \texttt{do var = start, stop [, step]} with \texttt{step} defaulting to 1.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Loop Variations}
+  \begin{block}{Examples}
+\begin{lstlisting}[language=Fortran]
+do i = 1, 30, 2     ! 15 iterations
+do j = 30, 1, -2    ! countdown
+do k = 30, 1, 2     ! zero-trip (skipped)
+do l = 1, 30        ! step default = 1
+\end{lstlisting}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Conditional \texttt{exit}}
+  \begin{block}{Example}
+\begin{lstlisting}[language=Fortran]
+frame = 0
+do
+  frame = frame + 1
+  if (frame > 100) exit
+  print *, "Reducing frame", frame
+end do
+print *, "Loop finished. frame now equals", frame
+\end{lstlisting}
+  \end{block}
+  \begin{block}{Explanation}
+    A \texttt{do} without loop control repeats forever. \texttt{exit} jumps out of the current \texttt{do} loop.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Conditional \texttt{cycle}}
+  \begin{block}{Example}
+\begin{lstlisting}[language=Fortran]
+frame = 0
+do
+  frame = frame + 1
+  if (frame >= 50 .and. frame <= 59) cycle   ! clouds: skip these frames
+  if (frame > 100) exit
+  print *, "Reducing frame", frame
+end do
+print *, "Loop finished. frame now equals", frame
+\end{lstlisting}
+  \end{block}
+  \begin{block}{Explanation}
+    \texttt{cycle} skips to the next iteration of the innermost loop.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{\texttt{do while} Loop}
+  \begin{block}{Example}
+\begin{lstlisting}[language=Fortran]
+do while (.not. converged)
+  ...
+end do
+\end{lstlisting}
+  \end{block}
+  \begin{block}{Equivalent}
+\begin{lstlisting}[language=Fortran]
+do
+  if (converged) exit
+  ...
+end do
+\end{lstlisting}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Named and Nested Loops}
+  \begin{block}{Example: counting bright pixels in an image}
+\begin{lstlisting}[language=Fortran]
+rows: do j = 1, ny
+  cols: do i = 1, nx
+    if (image(i, j) < 0.0) cycle rows          ! bad pixel: skip the rest of this row
+    if (image(i, j) > saturation) exit rows    ! saturated pixel: stop searching
+    if (image(i, j) < threshold) cycle         ! same as cycle cols
+    n_bright = n_bright + 1
+  end do cols
+end do rows
+\end{lstlisting}
+  \end{block}
+  \begin{block}{Notes}
+    \texttt{exit} and \texttt{cycle} can name the loop they act on. Without a name, they act on the innermost loop.
+  \end{block}
+\end{frame}
+
+\section{Wrap-up}
+
+\begin{frame}{Takeaways}
+  \begin{block}{Essentials}
+  \begin{itemize}
+    \item Use \texttt{implicit none}; declare all variables.
+    \item Prefer symbolic constants for fixed values.
+    \item Write keywords in lower case and use the symbolic operators (\texttt{<}, \texttt{==}, \texttt{/=}).
+    \item Control flow constructs: \texttt{if}, \texttt{do}, \texttt{do while}, \texttt{select case}.
+  \end{itemize}
+  \end{block}
+\end{frame}
+
+\section{Exercises}
+
+\begin{frame}{Exercises}
+  \begin{block}{Instructions}
+  \begin{itemize}
+    \item Write each exercise as a separate program in \texttt{students/<initials>/sandbox/l02/}.
+    \item Compile with checks on: \texttt{gfortran -Wall -fcheck=all -o prog prog.f90}
+    \item The programs do not read input yet: set the input values with assignments at the start of the program. To test another case (including invalid values), edit them and recompile.
+    \item Commit your programs and push them to your fork.
+  \end{itemize}
+  \end{block}
+  \begin{block}{Overview}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{enumerate}
+      \item Kepler's third law (arithmetic, conversion)
+      \item Spectral classes (\texttt{select case})
+      \item Habitable zone (logical operators)
+    \end{enumerate}
+    \column{0.48\textwidth}
+    \begin{enumerate}
+      \setcounter{enumi}{3}
+      \item Wien's law (indexed \texttt{do})
+      \item Kepler's equation (\texttt{do while})
+    \end{enumerate}
+  \end{columns}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Exercise 1: Kepler's Third Law}
+  \begin{block}{Task}
+  Set the semi-major axis $a$ (AU) of a planet and the mass $M$ ($M_\odot$) of its star in variables. Print the orbital period in years, in days, and as a whole number of days.
+  \begin{itemize}
+    \item Store the number of days in a year (365.25) as a \texttt{parameter}.
+    \item Stop with an error message if either value is not positive (\texttt{stop 'message'}).
+    \item Get the whole days by converting the period to an \texttt{integer}. Try both plain assignment and \texttt{int()}: what does \texttt{-Wall} say?
+  \end{itemize}
+  \end{block}
+  \begin{block}{Physics}
+  $P = \sqrt{a^3 / M}$, with $P$ in years, $a$ in AU, and $M$ in solar masses.
+  \end{block}
+  \begin{block}{Test}
+  Jupiter: $a = 5.2$, $M = 1.0$ $\to$ $P \approx 11.86$ years $\approx 4331$ days.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Exercise 2: Spectral Classification}
+  \begin{block}{Task}
+  Set the effective temperature $T_\mathrm{eff}$ (K) of a star in an \texttt{integer} variable and print its spectral class using \texttt{select case}. Store the class letter in a \texttt{character(len=1)} variable and print it with \texttt{//}. Temperatures outside the sequence should give a message.
+  \end{block}
+  \begin{block}{Physics}
+  \centering\setlength{\tabcolsep}{4pt}
+  \begin{tabular}{ccccccc}
+    O & B & A & F & G & K & M \\ \hline
+    $\geq 30\,000$ & 10\,000--29\,999 & 7500--9999 & 6000--7499 & 5200--5999 & 3700--5199 & 2400--3699 \\
+  \end{tabular}
+  \end{block}
+  \begin{block}{Test}
+  Sun: 5772 K $\to$ G. \quad Vega: 9602 K $\to$ A. \quad 1500 K $\to$ outside the sequence.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Exercise 3: Habitable Zone}
+  \begin{block}{Task}
+  Set the luminosity $L$ ($L_\odot$) of a star, and the semi-major axis $a$ (AU) and eccentricity $e$ of a planet in variables. Report whether the planet is \emph{always}, \emph{partly}, or \emph{never} in the habitable zone (and if never, whether it is too hot or too cold).
+  \begin{itemize}
+    \item Use two \texttt{logical} variables: is the periapsis in the zone, and is the apoapsis in the zone?
+    \item Hint: \texttt{.neqv.} is true when exactly one of its operands is true.
+    \item Reject eccentricities outside $0 \leq e < 1$. What if the orbit crosses the whole zone?
+  \end{itemize}
+  \end{block}
+  \begin{block}{Physics}
+  Zone edges $r_\mathrm{in} = \sqrt{L/1.1}$ and $r_\mathrm{out} = \sqrt{L/0.53}$ AU; periapsis $a(1-e)$, apoapsis $a(1+e)$.
+  \end{block}
+  \begin{block}{Test ($L = 1$)}
+  Earth (1.0, 0.017): always. \quad (1.3, 0.1): partly. \\ Venus (0.723, 0.007): too hot. \quad Mars (1.524, 0.093): too cold.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Exercise 4: Wien's Law Table}
+  \begin{block}{Task}
+  Print a table of the peak emission wavelength $\lambda_\mathrm{max}$ of a blackbody for $T = 3000, 6000, \ldots, 30\,000$ K, using an \texttt{integer} loop variable. Then print the table again, hottest first, using a negative step.
+  \begin{itemize}
+    \item Print the loop variable after each loop. Can you explain the values?
+    \item What would you get if $b$ were the \texttt{integer} constant \texttt{2897772}?
+  \end{itemize}
+  \end{block}
+  \begin{block}{Physics}
+  $\lambda_\mathrm{max} = b / T$, with $b = 2.897772 \times 10^{6}$ nm K.
+  \end{block}
+  \begin{block}{Test}
+  3000 K $\to$ 966 nm (infrared), \quad 6000 K $\to$ 483 nm (visible), \quad 30\,000 K $\to$ 96.6 nm (ultraviolet).
+  \end{block}
+\end{frame}
+
+\begin{frame}{Exercise 5: Kepler's Equation}
+  \begin{block}{Task}
+  Set the mean anomaly $M$ (rad) and eccentricity $e$ of an orbit in variables, and solve Kepler's equation for the eccentric anomaly $E$ using Newton's method.
+  \begin{itemize}
+    \item Start from $E_0 = M$ and iterate in a \texttt{do while} loop until $|E_{n+1} - E_n| < 10^{-6}$ or 50 iterations have been done.
+    \item Use a \texttt{logical} variable \texttt{converged}. Print $E$ and the number of iterations, or a warning if the iteration did not converge.
+  \end{itemize}
+  \end{block}
+  \begin{block}{Physics}
+  $E - e \sin E = M$, \qquad $E_{n+1} = E_n - \dfrac{E_n - e \sin E_n - M}{1 - e \cos E_n}$
+  \end{block}
+  \begin{block}{Test}
+  $M = 1.0$, $e = 0.5$ $\to$ $E \approx 1.4987$. \quad $M = 1.0$, $e = 0.9$ $\to$ $E \approx 1.8621$.
+  \end{block}
+\end{frame}
+
+\end{document}

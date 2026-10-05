@@ -2,16 +2,16 @@
 
 ## First steps
 
-1. Create a directory named using the initials of your surname(s) and first name(s) under the `students` directory (in lower-case letters). 
+1. Create a directory named using the initials of your surname(s) and first name(s) under the `students` directory (in lower-case letters).
    For example, I (Hannu Parviainen) would create a directory `ph`.
 2. Create subdirectories `sandbox`, `course_exercise_1` and `course_exercise_2` under this directory.
 3. Create empty README.md files under the course exercise directories.
-4. Create a subdirectory for each lecture under the sandbox directory. The directory name should be `lxx`, where x is a two-digit lecture 
-   number (so that lecture 1 is `l01`, lecture 2 is `l02`, and so on). These subdirectories will contain your non-scored exercises and can 
+4. Create a subdirectory for each lecture under the sandbox directory. The directory name should be `lxx`, where x is a two-digit lecture
+   number (so that lecture 1 is `l01`, lecture 2 is `l02`, and so on). These subdirectories will contain your non-scored exercises and can
    be created during the lectures.
-  
+
 Now, after the second lecture, your directory tree should look like:
-  
+
     students
     |- ph
     ||- sandbox
@@ -24,17 +24,19 @@ Now, after the second lecture, your directory tree should look like:
 
 5. Edit this README.md file to include your name and the name of the directory you created under the "Students" section below.
 6. Stage all the README.md files using `git add` and commit the changes using `git commit`.
-7. Push the changes to GitHub using `git push`.
-8. In GitHub, open a pull request telling me you have reached this far.
+7. Push the changes to GitHub using `git push`. 8. In GitHub, open a pull request telling me you have reached this far.
 
 ## Students
 
-| Name | Directory |
-|--|--|
-| Name Surname Surname| ssn |
+| Name                 | Directory |
+| -------------------- | --------- |
 | Carlos Manuel García Montalván | cmgm |
-
+| Miguel Barchín Rubio | brm       |
+| Jorge Faci Descartín | fdj       |
+| Julio Garcia Piñeiro | gpj       |
+| Alejandro Trujillo Ramos | tra   |
 ---
+
 <p align="center">
 &copy;2026 Hannu Parviainen
 </p>

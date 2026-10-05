@@ -1,0 +1,564 @@
+\input{../common}
+\subtitle{Lecture 4: Data Type Precision, Programs, Modules, and Procedures}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\input{l04a_type_precision}
+
+\section{Program Units}
+
+\begin{frame}
+  \centering
+  \Huge \textbf{Program Units}
+\end{frame}
+
+
+\begin{frame}{Fortran program units}
+  \begin{block}{Program units}
+    \begin{itemize}
+      \item \textbf{program}: where execution begins. Every executable has exactly one.
+      \item \textbf{module}: a container for constants, variables, types, and procedures. Other program units get access to it with \texttt{use}.
+    \end{itemize}
+  \end{block}
+  \begin{block}{Procedures}
+    \begin{itemize}
+      \item \textbf{subroutine}: performs a task. It is invoked with \texttt{call} and returns no value.
+      \item \textbf{function}: returns a value, so it is used inside an expression.
+    \end{itemize}
+  \end{block}
+  \begin{block}{Where procedures live}
+    Procedures are placed inside a program or a module, after a \texttt{contains} statement.
+  \end{block}
+\end{frame}
+
+
+\begin{frame}[fragile]{The main program}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item Execution starts at the first executable statement of the program.
+        \item The order is fixed: \texttt{use} statements, \texttt{implicit none}, declarations, and then executable statements.
+        \item An optional \texttt{contains} section holds \emph{internal procedures}, which only this program can call.
+        \item Here \texttt{negative} is an internal function. We return to functions later in this lecture.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \begin{lstlisting}
+program main
+  implicit none
+  real :: x                  ! declarations
+  read *, x                  ! executable statements
+  print *, floor(x)          ! intrinsic function
+  print *, negative(x)       ! internal function
+contains
+  real function negative(a)
+    real, intent(in) :: a
+    negative = -a
+  end function negative
+end program main
+      \end{lstlisting}
+      \begin{lstlisting}[language=bash]
+$ echo 2.7 | ./a.out
+           2
+  -2.70000005
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\section{Modules}
+
+\begin{frame}
+  \centering
+  \Huge \textbf{Modules}
+\end{frame}
+
+
+\begin{frame}[fragile]{A first module: kinds}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item A module is a named container. The simplest ones hold only constants.
+        \item A \texttt{use} statement makes the contents of a module available. It goes before \texttt{implicit none}.
+        \item This \texttt{kinds} module does what the precision section recommended: it defines the kind once, in one place.
+        \item Every part of the program then uses \texttt{real(dp)}, and changing the precision of the whole program means changing one line.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \begin{lstlisting}
+module kinds
+  use iso_fortran_env, only: real32, real64
+  implicit none
+  integer, parameter :: sp = real32
+  integer, parameter :: dp = real64
+end module kinds
+
+program use_kinds
+  use kinds, only: dp
+  implicit none
+  real(dp) :: x = 0.1_dp
+  print *, x   ! 0.10000000000000001
+end program use_kinds
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Modules with procedures}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item Most modules are libraries: they collect related constants, types, functions, and subroutines.
+        \item The procedures go after \texttt{contains}.
+        \item A module can share a file with the program, as here, but it must come first. Usually each module has its own file.
+        \item Modules are compiled separately, so many programs can use the same one.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \begin{lstlisting}
+module mymath
+  implicit none
+  real, parameter :: pi = 3.14159
+contains
+  real function square(a)
+    real, intent(in) :: a
+    square = a**2
+  end function square
+end module mymath
+
+program ex1
+  use mymath
+  implicit none
+  print *, square(2.3), pi
+end program ex1
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Compiling a program that uses a module}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item With the module and the program in \texttt{ex1.f90}, compiling produces the executable \texttt{ex1} and a module file, \texttt{mymath.mod}.
+        \item The \texttt{.mod} file describes the contents of the module, much like a header file in C. The compiler reads it whenever it meets \texttt{use mymath}.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.5\textwidth}
+      \begin{lstlisting}[language=bash]
+$ gfortran -o ex1 ex1.f90
+$ ls
+ex1  ex1.f90  mymath.mod
+$ ./ex1
+   5.28999996       3.14159012
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Modules in separate files}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item Now \texttt{mymath.f90} holds the module and \texttt{ex1.f90} the program.
+        \item The module must be compiled first, because the program needs its \texttt{.mod} file.
+        \item Either compile it separately and link the object file, or give both files in the right order.
+        \item For larger projects, use a \textbf{Makefile} (covered later in the course).
+      \end{itemize}
+      \begin{lstlisting}[language=bash]
+$ gfortran -c mymath.f90
+$ gfortran -o ex1 ex1.f90 mymath.o
+
+$ gfortran -o ex1 mymath.f90 ex1.f90
+      \end{lstlisting}
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+\begin{lstlisting}[language=Fortran,caption={mymath.f90}]
+module mymath
+  implicit none
+  real, parameter :: pi = 3.14159
+contains
+  real function square(a)
+    real, intent(in) :: a
+    square = a**2
+  end function square
+end module mymath
+\end{lstlisting}
+
+\begin{lstlisting}[language=Fortran,caption={ex1.f90}]
+program ex1
+  use mymath
+  implicit none
+  print *, square(2.3), pi
+end program ex1
+\end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Controlling access: \texttt{private}, \texttt{public}, and \texttt{only}}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item Everything in a module is \texttt{public} by default.
+        \item A bare \texttt{private} statement hides everything from the users of the module. A \texttt{public ::} statement then lists what the module offers.
+        \item On the other side, \texttt{use shapes, only: sphere\_volume} imports only the listed names.
+        \item This avoids name clashes and shows where each name comes from. We have already used it with \texttt{iso\_fortran\_env}.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \begin{lstlisting}
+module shapes
+  implicit none
+  private
+  public :: sphere_volume
+  real, parameter :: pi = 3.14159   ! private
+contains
+  real function sphere_volume(r)
+    real, intent(in) :: r
+    sphere_volume = 4.0 / 3.0 * pi * r**3
+  end function sphere_volume
+end module shapes
+
+program ex2
+  use shapes, only: sphere_volume
+  implicit none
+  print *, sphere_volume(2.0)   ! 33.5102959
+end program ex2
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\section{Procedures}
+
+\begin{frame}
+  \centering
+  \Huge \textbf{Procedures}
+\end{frame}
+
+
+\begin{frame}[fragile]{Subroutines}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item A subroutine performs a task and is invoked with \texttt{call}.
+        \item It returns no value. Any results go back through its arguments.
+        \item The general form:
+      \end{itemize}
+      \begin{lstlisting}
+subroutine name(arguments)
+  ! declarations of the arguments
+  ! local declarations
+  ! executable statements
+end subroutine name
+      \end{lstlisting}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \begin{lstlisting}
+program figures
+  implicit none
+  call output_figures([1.0, 2.0])
+contains
+  subroutine output_figures(numbers)
+    real, intent(in) :: numbers(:)
+    print *, 'Here are the figures', numbers
+  end subroutine output_figures
+end program figures
+      \end{lstlisting}
+      \begin{lstlisting}[language=bash]
+$ ./a.out
+ Here are the figures   1.00000000       2.00000000
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Functions}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item A function returns a value, so it is used inside an expression.
+        \item There are two ways to name the returned value:
+          \begin{itemize}
+            \item with \texttt{result(res)}, where \texttt{res} is declared like any other variable,
+            \item with the name of the function, whose type is then given in front of \texttt{function}.
+          \end{itemize}
+        \item Both do the same thing. We use the \texttt{result} form for the recursive functions below.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \begin{lstlisting}
+program functions
+  implicit none
+  ! Both functions return 5.0
+  print *, length_a(3.0, 4.0), length_b(3.0, 4.0)
+contains
+  function length_a(a, b) result(res)
+    real, intent(in) :: a, b
+    real :: res
+    res = sqrt(a**2 + b**2)
+  end function length_a
+
+  real function length_b(a, b)
+    real, intent(in) :: a, b
+    length_b = sqrt(a**2 + b**2)
+  end function length_b
+end program functions
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Arguments and \texttt{intent}}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item The names in the definition of a procedure are its \emph{dummy arguments}. The call supplies the \emph{actual arguments}.
+        \item Declare the intent of every dummy argument:
+          \begin{itemize}
+            \item \texttt{intent(in)}: only read,
+            \item \texttt{intent(out)}: set by the procedure,
+            \item \texttt{intent(inout)}: read and modified.
+          \end{itemize}
+        \item The compiler then catches mistakes, such as assigning to an \texttt{intent(in)} argument.
+        \item \texttt{v(:)} is an \emph{assumed-shape} array: it takes its shape from the caller.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.52\textwidth}
+      \begin{lstlisting}
+module vectors
+  implicit none
+contains
+  subroutine scale(alpha, v)
+    real, intent(in)    :: alpha
+    real, intent(inout) :: v(:)
+    v = alpha * v
+  end subroutine scale
+end module vectors
+
+program scale_vector
+  use vectors, only: scale
+  implicit none
+  real :: v(3) = [1.0, 2.0, 3.0]
+  call scale(2.0, v)
+  print *, v   ! 2.0  4.0  6.0
+end program scale_vector
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Recursive functions}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item A recursive function calls itself.
+        \item This suits problems that are defined in terms of smaller versions of themselves, such as the factorial, or walking through a tree.
+        \item It must be declared \texttt{recursive}. Fortran 2018 makes this the default, but gfortran still requires the keyword.
+        \item It needs a case that ends the recursion. Otherwise it never stops.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \begin{lstlisting}
+program recursion
+  implicit none
+  print *, factorial(5), factorial(10)   ! 120  3628800
+contains
+  recursive function factorial(n) result(f)
+    integer, intent(in) :: n
+    integer :: f
+    if (n <= 1) then
+      f = 1
+    else
+      f = n * factorial(n - 1)
+    end if
+  end function factorial
+end program recursion
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Pure functions}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item A \texttt{pure} function has no side effects. It cannot change its arguments, which must all be \texttt{intent(in)}, change module variables, or do I/O.
+        \item The same arguments therefore always give the same result.
+        \item The compiler checks this promise, and can then run calls in any order. This makes pure functions safe to use in parallel code.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \begin{lstlisting}
+program purity
+  implicit none
+  print *, length(3.0, 4.0)   ! 5.0
+contains
+  pure function length(x, y) result(r)
+    real, intent(in) :: x, y
+    real :: r
+    r = sqrt(x**2 + y**2)
+  end function length
+end program purity
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Elemental functions}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item An \texttt{elemental} function is written for scalars, but can also be applied to arrays, element by element.
+        \item This is how intrinsic functions such as \texttt{sin} and \texttt{exp} work on arrays.
+        \item The actual arguments may be scalars or conformable arrays.
+        \item \texttt{elemental} implies \texttt{pure}.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \begin{lstlisting}
+module squares
+  implicit none
+contains
+  elemental real function square(x)
+    real, intent(in) :: x
+    square = x * x
+  end function square
+end module squares
+
+program elemental_example
+  use squares, only: square
+  implicit none
+  real :: x(3) = [1.0, 2.0, 3.0]
+  print *, square(2.0)   ! 4.0
+  print *, square(x)     ! 1.0  4.0  9.0
+end program elemental_example
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\section{Exercises}
+
+\begin{frame}{Exercises: machine epsilon}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Machine epsilon is the gap between 1.0 and the next larger real. Find it for 32-bit reals with a loop: start from \texttt{eps = 1.0} and keep halving it for as long as \mbox{\texttt{1.0 + eps/2 > 1.0}}.
+      \item Do the same for 64-bit reals.
+      \item Compare your two results with the intrinsic function \texttt{epsilon(x)}.
+      \item How many significant decimal digits does each result correspond to?
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}{Exercises: the order of a sum}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Compute the sum $\sum_{k=1}^{N} 1/k$ for $N = 10^7$ with 32-bit reals, adding the terms from $k = 1$ upwards.
+      \item Compute the same sum again, now adding the terms from $k = N$ downwards.
+      \item Compute it once more with 64-bit reals, and use that as the reference. Which 32-bit result is closer?
+      \item Explain the difference. Hint: think about the size of the gap between neighbouring reals when a small term is added to a large sum.
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}{Exercises: a quadratic equation}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Write a program that solves $a x^2 + b x + c = 0$ with the standard formula
+        \[ x_{1,2} = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a} \]
+        using 32-bit reals.
+      \item Test it with $a = 1$, $b = -10^4$, and $c = 1$. The exact roots are close to $10^4$ and $10^{-4}$. What do you get?
+      \item Explain what went wrong with the smaller root.
+      \item Fix it without changing the precision. Hint: the product of the two roots is $c/a$.
+      \item Repeat with 64-bit reals. How many digits of the smaller root does the standard formula get right now?
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Exercises: modules, subroutines, and functions}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Write a module \texttt{mymath} in a file \texttt{mymath.f90} that contains:
+        \begin{itemize}
+          \item a parameter \texttt{pi = 3.14159},
+          \item a function \texttt{circle\_area(r)} that returns the area of a circle.
+        \end{itemize}
+      \item Write a main program in a file \texttt{test\_mymath.f90} that uses the module and prints the area of a circle with radius 2.0.
+      \item Compile and link the module and the program.
+      \item Add a \texttt{kinds} module that defines \texttt{dp}, and change \texttt{mymath} and the program to use \texttt{real(dp)}. How many digits of the result can you trust now?
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}{Exercises: a subroutine with several results}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Write a module \texttt{stats} with a subroutine \texttt{mean\_and\_std(x, mean, std)} that returns the mean and the sample standard deviation of a real array \texttt{x} of any size.
+      \item Give every dummy argument the right \texttt{intent}, and make the array assumed-shape.
+      \item Write a main program that calls the subroutine with the magnitudes \mbox{\texttt{[4.2, 3.9, 4.5, 4.1, 4.3]}} and prints the results.
+      \item Add a statement to the subroutine that changes \texttt{x}. What does the compiler say?
+      \item Make the module \texttt{private}, export only the subroutine, and import it with \texttt{only}.
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}{Exercises: an elemental function}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Write a module \texttt{photometry} with an elemental function \texttt{flux\_to\_mag(flux)} that returns the magnitude $m = -2.5 \log_{10} F$.
+      \item Call it from a main program with a single flux, and then with an array of fluxes.
+      \item Add a \texttt{print} statement inside the function. What does the compiler say, and why?
+      \item What happens if one of the fluxes is zero or negative? Protect the calculation in the main program with a \texttt{where} construct.
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}{Exercises: recursive functions}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Write a recursive function \texttt{factorial(n)} that computes $n!$.
+      \item Test the function by computing $5!$ and $10!$.
+      \item Modify the function to handle invalid inputs (e.g.\ $n < 0$).
+      \item Write a recursive function \texttt{fibonacci(n)} that returns the $n$th Fibonacci number.
+      \item Compare the recursive implementation with an iterative one.
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+
+\end{document}

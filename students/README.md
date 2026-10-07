@@ -28,8 +28,8 @@ Now, after the second lecture, your directory tree should look like:
 
 ## Students
 
-| Name                 | Directory |
-| -------------------- | --------- |
+| Name | Directory |
+| Iván Pérez Montesinos | pmi |
 | Carlos Manuel García Montalván | cmgm |
 | Miguel Barchín Rubio | brm       |
 | Jorge Faci Descartín | fdj       |

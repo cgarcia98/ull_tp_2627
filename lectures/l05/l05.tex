@@ -1,0 +1,447 @@
+\input{../common}
+\subtitle{Lecture 5: Dynamic Memory and Pointers}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\section{Dynamic Memory Allocation}
+
+\begin{frame}
+	\centering
+	\Huge \textbf{Dynamic Memory Allocation}
+\end{frame}
+
+
+\begin{frame}[fragile]{Static memory allocation}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{Concept}
+      \begin{itemize}
+        \item The array size is fixed at compile time.
+        \item The memory is reserved when the program or procedure starts.
+        \item Lifetime = the whole run of the program (or of the procedure).
+        \item Efficient, but inflexible when the array size is not known in advance.
+      \end{itemize}
+    \end{block}
+    \column{0.52\textwidth}
+    \lstinputlisting[language=Fortran]{ex01.f90}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Dynamic memory allocation}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{Concept}
+      \begin{itemize}
+        \item The size and shape are chosen at run time.
+        \item The memory is allocated with \texttt{allocate}.
+        \item It is released with \texttt{deallocate}, or automatically when the array goes out of scope.
+        \item More flexible, at the cost of a little time for each allocation.
+      \end{itemize}
+    \end{block}
+    \column{0.52\textwidth}
+    \lstinputlisting[language=Fortran]{ex02.f90}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Allocatable Arrays in Fortran}
+\begin{block}{Declaration}
+\begin{lstlisting}[language=Fortran]
+integer, dimension(:),   allocatable :: ages
+real,    dimension(:,:), allocatable :: speed
+\end{lstlisting}
+ \end{block}
+ \begin{block}{Allocation}
+\begin{lstlisting}[language=Fortran]
+integer :: isize, ierr
+read *, isize
+
+allocate(ages(isize))
+
+allocate(speed(0:isize-1, 10), stat=ierr)
+if (ierr /= 0) error stop 'speed: allocation failed'
+\end{lstlisting}
+ \end{block}
+ \begin{block}{Note}
+   Without \texttt{stat}, a failed allocation stops the program with an error message.
+   With \texttt{stat}, the program continues, so you must handle the failure yourself.
+ \end{block}
+\end{frame}
+
+
+\begin{frame}[fragile]{Automatic allocation on assignment}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item Since Fortran 2003, assigning to an allocatable array allocates it with the shape of the right-hand side.
+        \item If the shapes differ, the array is reallocated. So \texttt{a = [a, x]} appends an element.
+        \item Appending this way copies the whole array every time. That is fine for small arrays, but slow inside a long loop.
+        \item \texttt{a(:) = ...} assigns to the existing elements and never reallocates.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \begin{lstlisting}
+program auto_alloc
+  implicit none
+  real, allocatable :: a(:)
+  a = [1.0, 2.0, 3.0]     ! allocated with size 3
+  a = [a, 4.0]            ! reallocated with size 4
+  print *, size(a)        ! 4
+  print *, a              ! 1.0  2.0  3.0  4.0
+  a = a(2:3)              ! reallocated with size 2
+  print *, size(a)        ! 2
+  print *, a              ! 2.0  3.0
+end program auto_alloc
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]{Deallocation and Status}
+ \begin{block}{Deallocate}
+\begin{lstlisting}[language=Fortran]
+if (allocated(ages)) deallocate(ages)
+if (allocated(speed)) deallocate(speed)
+\end{lstlisting}
+ \end{block}
+ \begin{block}{Guidelines}
+   \begin{itemize}
+     \item A local allocatable array is deallocated automatically when its procedure returns. Allocatable arrays cannot leak memory.
+     \item Use \texttt{deallocate} to free memory early, for example a large work array.
+     \item Allocating an array that is already allocated, or deallocating one that is not, is an error. Test with \texttt{allocated(array)}.
+   \end{itemize}
+ \end{block}
+\end{frame}
+
+
+\begin{frame}[fragile]{Allocatable strings}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item \texttt{character(len=:), allocatable} declares a string whose length is set when it is assigned.
+        \item The string is reallocated whenever it is given a value of a different length.
+        \item Compare with a fixed-length \texttt{character(len=10)}, which is padded with blanks and needs \texttt{trim}.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \begin{lstlisting}
+program strings
+  implicit none
+  character(len=:), allocatable :: name
+  name = 'Vega'
+  print *, name, len(name)
+  name = name // ' (alpha Lyr)'
+  print *, name, len(name)
+end program strings
+      \end{lstlisting}
+      \begin{lstlisting}[language=bash]
+$ ./a.out
+ Vega           4
+ Vega (alpha Lyr)          16
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+
+\section{Pointers}
+
+\begin{frame}
+	\centering
+	\Huge \textbf{Pointers}
+\end{frame}
+
+\begin{frame}{Fortran Pointers: Introduction}
+  \begin{block}{What is a pointer?}
+    \begin{itemize}
+      \item A \textbf{pointer} is a variable that does not store a value directly,
+            but instead \textbf{points to a memory location}.
+      \item In Fortran, pointers can be associated with
+            \begin{itemize}
+              \item other variables,
+              \item array sections,
+              \item dynamically allocated memory.
+            \end{itemize}
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Why are they useful?}
+    \begin{itemize}
+      \item Allow multiple variables to \textbf{share the same data}.
+      \item Needed for building \textbf{linked data structures}
+            (lists, trees, graphs).
+      \item Provide flexibility similar to references in modern languages.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}{Python vs.~Fortran Variables}
+  \begin{block}{Key difference}
+    \begin{itemize}
+      \item \textbf{Python variables} are \emph{references} to objects in memory.
+        \begin{itemize}
+          \item Assigning one variable to another does not copy the object.
+          \item Example: \texttt{b = a} makes \texttt{b} point to the same object as \texttt{a}.
+        \end{itemize}
+      \item \textbf{Fortran variables} are normally \emph{values} stored directly.
+        \begin{itemize}
+          \item Assigning one variable to another copies the value.
+          \item No implicit references like in Python.
+        \end{itemize}
+    \end{itemize}
+  \end{block}
+
+  \textbf{Python variables act like Fortran pointers by default}, while plain Fortran variables are independent copies.
+
+\end{frame}
+
+
+\begin{frame}[fragile]{Pointer Declaration}
+  \begin{block}{Definition}
+    \begin{itemize}
+      \item A variable with the \texttt{pointer} attribute.
+      \item Has static type, kind, and rank determined by its declaration.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Examples}
+\begin{lstlisting}[language=Fortran]
+real, pointer :: ptor => null()
+real, dimension(:,:), pointer :: ptoa => null()
+\end{lstlisting}
+    \begin{itemize}
+      \item \texttt{ptor} is a pointer to a scalar real target.
+      \item \texttt{ptoa} is a pointer to a 2D array of reals.
+      \item A new pointer points nowhere in particular: its status is \emph{undefined}. Initialise it with \texttt{=> null()}.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}[fragile]{Target Declaration}
+
+  \begin{block}{Targets must have the \texttt{target} attribute}
+\begin{lstlisting}[language=Fortran]
+real, target :: x, y
+real, dimension(5,3), target :: a, b
+real, dimension(3,5), target :: c
+\end{lstlisting}
+    \begin{itemize}
+      \item \texttt{x} or \texttt{y} may become associated with \texttt{ptor}.
+      \item \texttt{a}, \texttt{b}, or \texttt{c} may become associated with \texttt{ptoa}.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Pointer Manipulation}
+  \begin{block}{Operators}
+    \begin{itemize}
+      \item \texttt{=>} pointer assignment: alias pointer with a target.
+      \item \texttt{=} normal assignment: assign value to space pointed at.
+    \end{itemize}
+    Pointer assignment makes the pointer and target reference the same space, while normal assignment changes the value.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Pointer Assignment}
+\begin{lstlisting}[language=Fortran]
+real, target :: x, y
+real, pointer :: ptor
+
+x = 3.14159
+ptor => y
+ptor = x
+\end{lstlisting}
+  \begin{itemize}
+    \item \texttt{x} and \texttt{ptor} have the same value.
+    \item \texttt{ptor} is an alias for \texttt{y}, so the assignment sets \texttt{y = 3.14159}.
+    \item Changing \texttt{x} later does not change \texttt{ptor} or \texttt{y}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Dynamic Targets}
+
+  \begin{block}{Targets can be created dynamically by allocation}
+\begin{lstlisting}[language=Fortran]
+allocate(ptor, stat=ierr)
+allocate(ptoa(n*n, 2*k-1), stat=ierr)
+\end{lstlisting}
+    \begin{itemize}
+      \item First: allocates a scalar real as target of \texttt{ptor}.
+      \item Second: allocates a rank-2 real array as target of \texttt{ptoa}.
+      \item Allocating a pointer that is already associated is not an error. But if nothing else points to its old target, that memory is lost: a \textbf{memory leak}.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Association Status}
+  \begin{block}{Test with \texttt{associated()}}
+\begin{lstlisting}[language=Fortran]
+associated(ptoa)        ! is it associated with any target?
+associated(ptoa, arr)   ! is it associated with arr?
+\end{lstlisting}
+    \begin{itemize}
+      \item Returns \texttt{.true.} if the pointer is associated.
+      \item The second form tests association with a specific target.
+      \item The test is only valid when the status of the pointer is defined. This is another reason to initialise pointers with \texttt{null()}.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Pointer Disassociation}
+  \begin{block}{Nullification}
+\begin{lstlisting}[language=Fortran]
+nullify(ptor)       ! or: ptor => null()
+\end{lstlisting}
+    \begin{itemize}
+      \item Breaks the pointer–target connection. The target itself is not changed.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Deallocation}
+\begin{lstlisting}[language=Fortran]
+deallocate(ptoa, stat=ierr)
+\end{lstlisting}
+    \begin{itemize}
+      \item Breaks the connection and frees the target.
+      \item Only for targets that were created with \texttt{allocate}. Deallocating a pointer to an ordinary variable is an error.
+      \item Any other pointer to the same target is left \textbf{dangling}: it points to memory that no longer exists.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}{Allocatable or pointer?}
+  \begin{block}{Use allocatable arrays by default}
+    They are freed automatically, so they cannot leak or dangle. The compiler also knows that they do not overlap other variables, which lets it produce faster code.
+  \end{block}
+  \begin{block}{Use pointers when you need what only they can do}
+    Giving a second name to existing data, such as a section of a large array. Swapping large arrays without copying them. Building linked structures such as lists and trees.
+  \end{block}
+  \begin{block}{Pointer pitfalls}
+    \begin{itemize}
+      \item \textbf{Memory leak}: the last pointer to allocated memory is redirected or nullified before the memory is deallocated.
+      \item \textbf{Dangling pointer}: the target is deallocated, or goes out of scope, while a pointer still points to it.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}[fragile]{Practical Example: Swapping Arrays without Copying}
+  \begin{columns}[T]
+    \begin{column}{0.38\textwidth}
+      \begin{itemize}
+        \item Heat diffusion on a grid: each new value is the mean of its four neighbours.
+        \item Every iteration needs the previous grid and the next one.
+        \item Swapping the two pointers swaps their roles, and no data are copied.
+        \item The loop ends when the largest change, \texttt{maxval(abs(...))}, is small enough. Here that takes 1898 iterations.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.62\textwidth}
+      \begin{lstlisting}[aboveskip=0pt, belowskip=0pt]
+program jacobi
+  implicit none
+  integer, parameter :: n = 100
+  real, target :: grid1(n,n), grid2(n,n)
+  real, pointer :: old(:,:), new(:,:), tmp(:,:)
+  integer :: iter
+  grid1 = 0.0
+  grid1(1,:) = 1.0        ! hot top edge
+  grid2 = grid1
+  old => grid1
+  new => grid2
+  do iter = 1, 100000
+    new(2:n-1,2:n-1) = (old(1:n-2,2:n-1) + old(3:n,2:n-1) &
+                      + old(2:n-1,1:n-2) + old(2:n-1,3:n)) / 4
+    if (maxval(abs(new - old)) < 1.0e-4) exit
+    tmp => old            ! swap the roles, copy nothing
+    old => new
+    new => tmp
+  end do
+  print *, 'Converged after', iter, 'iterations'
+end program jacobi
+      \end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\section{Exercises}
+
+\begin{frame}{Exercises: a growing array}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Write a program that reads real numbers from standard input until the input ends, and stores them in an allocatable array. Start from an empty array, \texttt{allocate(a(0))}, and append each new value with \texttt{a = [a, x]}.
+      \item Print the number of values, their mean, and the values in reverse order.
+      \item Test the program by redirecting a file to its standard input.
+      \item What does the program do if the input is empty? Make it stop with a clear message.
+      \item Appending copies the whole array each time. How could you read a very long file more efficiently?
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}{Exercises: pointers}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Declare two real target arrays, \texttt{a} and \texttt{b}, with different values, and two pointers, \texttt{p} and \texttt{q}, initialised with \texttt{null()}.
+      \item Point \texttt{p} at \texttt{a} and \texttt{q} at \texttt{b}. Change one element through \texttt{p} and print \texttt{a}. What happened?
+      \item Swap the two pointers, so that \texttt{p} points at \texttt{b} and \texttt{q} at \texttt{a}, without copying any array.
+      \item Confirm the result with \texttt{associated(p, b)} and \texttt{associated(q, a)}.
+      \item Allocate a new target for \texttt{p} with \texttt{allocate}. Which of the pitfalls from the lecture can now happen, and how do you avoid them?
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Exercises: sigma clipping}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Write a module with a function \texttt{clip(x, nsigma)} that returns the elements of the real array \texttt{x} that lie within \texttt{nsigma} standard deviations of its mean.
+      \item The size of the result is only known at run time, so make the function result allocatable. Hint: count the elements to keep, allocate the result, and then copy them.
+      \item Test it with \mbox{\texttt{[10.1, 9.8, 10.3, 9.9, 55.0, 10.0, 10.2]}} and \texttt{nsigma = 2.0}. Which value is removed?
+      \item Store the result in an allocatable array in the main program. Do you need to allocate that array yourself?
+      \item Repeat the clipping until no more values are removed, and print the mean of what is left.
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}{Exercises: a histogram}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Write a program that reads integers from standard input until the input ends, and stores them in an allocatable array.
+      \item Allocate a second array, \texttt{counts}, whose lower and upper bounds are the smallest and the largest value that was read.
+      \item Count how many times each value occurs, so that \texttt{counts(v)} is the number of times the value \texttt{v} was read. Print every value with its count.
+      \item Print the bounds and the size of \texttt{counts} with \texttt{lbound}, \texttt{ubound}, and \texttt{size}.
+      \item What happens with empty input? Make the program stop with a clear message.
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}{Exercises: a window into an image}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Read two integers, \texttt{nx} and \texttt{ny}, allocate a real array \texttt{image(nx,ny)} with the \texttt{target} attribute, and set it to zero.
+      \item Point a two-dimensional pointer \texttt{window} at the central part of the image, \mbox{\texttt{image(nx/4+1:3*nx/4, ny/4+1:3*ny/4)}}. Print its shape and its lower bounds.
+      \item Set \texttt{window = 1.0} and print the sum of the whole image. What does the result tell you?
+      \item Point a one-dimensional pointer at every second element of the first column of the image, set those elements to 5.0, and print the first column.
+      \item Deallocate the image. What does \texttt{associated(window)} return now, and can you trust it? What should you do with the pointers?
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+
+
+\end{document}

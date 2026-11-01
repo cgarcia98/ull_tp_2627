@@ -1,0 +1,18 @@
+# Makefile for the mymath program of lecture 4
+# mymath.f90 program uses the mymath.mod and kinds.mod modules
+
+# rules and no variables
+test_mymath: test_mymath.o mymath.o kinds.o 
+	gfortran -o test_mymath test_mymath.o mymath.o kinds.o
+
+kinds.o: kinds.f90
+	gfortran -c kinds.f90
+
+mymath.o: mymath.f90 kinds.o
+	gfortran -c mymath.f90
+
+test_mymath.o: test_mymath.f90 kinds.o mymath.o
+	gfortran -c test_mymath.f90
+
+clean:
+	rm -f *.o *.mod test_mymath

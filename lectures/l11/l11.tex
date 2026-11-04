@@ -60,28 +60,14 @@
 
 \begin{frame}
   \frametitle{Computational scaling}
-  If the run time $T$ grows as $N^2$, ten times more particles take a hundred times longer:
-  \begin{itemize}
-    \item \( T_{N=100} / T_{N=10} = 100 \)
-    \item \( T_{N=1000} / T_{N=100} = 100 \)
-    \item \( T_{N=10\,000} / T_{N=1000} = 100 \)
-    \item \( T_{N=10\,000} / T_{N=10} = 1\,000\,000 \)
-    \item<2-> \textbf{Not good!}
-    \item<3-> \textbf{Not good at all!} If $N = 1000$ takes one second, $N = 10^6$ takes $10^6$ seconds, almost 12 days.
-  \end{itemize}
-\end{frame}
-
-
-\begin{frame}
-  \frametitle{What can we do?}
   \begin{columns}[T]
     \begin{column}{0.5\textwidth}
       \begin{itemize}
-        \item Find an algorithm that scales better.
-        \item \textbf{The Barnes--Hut algorithm} \\
+        \item If the run time $T$ grows as $N^2$, ten times more particles take a hundred times longer.
+        \item<2-> \textbf{Not good!}
+        \item<3-> \textbf{Not good at all!} If $N = 1000$ takes one second, $N = 10^6$ takes $10^6$ seconds, almost 12 days.
+        \item<4-> What can we do? \textbf{The Barnes--Hut algorithm} scales as $O(N \log N)$, and $N = 10^6$ takes about half an hour. \\
           {\footnotesize J. Barnes and P. Hut (1986), \emph{A hierarchical $O(N \log N)$ force-calculation algorithm}, Nature 324, 446--449.}
-        \item It scales as $O(N \log N)$.
-        \item If $N = 1000$ takes one second, $N = 10^6$ now takes about 2000 seconds, roughly half an hour.
       \end{itemize}
     \end{column}
 
@@ -90,12 +76,12 @@
       \vspace*{2mm}
       \small
       \begin{tabular}{lrr}
-        & $T \propto N^2$ & $T \propto N \log N$ \\
+        & $T \propto N^2$ & \uncover<4->{$T \propto N \log N$} \\
         \hline
-        \( T_{N=100} / T_{N=10} \)             & 100       & 20 \\
-        \( T_{N=1000} / T_{N=100} \)           & 100       & 15 \\
-        \( T_{N=10\,000} / T_{N=1000} \)       & 100       & 13.3 \\
-        \( T_{N=10\,000} / T_{N=10} \)         & $10^6$    & 4000 \\
+        \( T_{N=100} / T_{N=10} \)             & 100       & \uncover<4->{20} \\
+        \( T_{N=1000} / T_{N=100} \)           & 100       & \uncover<4->{15} \\
+        \( T_{N=10\,000} / T_{N=1000} \)       & 100       & \uncover<4->{13.3} \\
+        \( T_{N=10\,000} / T_{N=10} \)         & $10^6$    & \uncover<4->{4000} \\
         \hline
       \end{tabular}
     \end{column}
@@ -206,7 +192,7 @@
       \begin{tikzpicture}[x=1cm, y=1cm]
         \coordinate (P) at (0,0);
         \coordinate (C) at (4.05,0.15);   % centre of mass of the node
-        % The node: a square of side s
+        % The box: a square of side s
         \fill[blue!15] (3.2,-0.8) rectangle (4.8,0.8);
         \draw (3.2,-0.8) rectangle (4.8,0.8);
         \foreach \x/\y in {3.5/0.45, 3.9/-0.4, 4.4/0.55, 4.5/-0.1, 3.9/0.3} {
@@ -227,9 +213,9 @@
 
     \begin{column}{0.55\textwidth}
       \begin{itemize}
-        \item A node of size $s$ whose centre of mass is at distance $d$ is used as a single point mass if $s / d < \theta$.
-        \item $s/d$ is roughly the angle at which the node is seen from the particle, so $\theta$ is called the \emph{opening angle}.
-        \item A smaller $\theta$ is more accurate but slower. With $\theta = 0$, no node is a point mass, and we get the direct sum.
+        \item A group inside a box of size $s$, whose centre of mass is at distance $d$, is used as a single point mass if $s / d < \theta$.
+        \item $s/d$ is roughly the angle at which the box is seen from the particle, so $\theta$ is called the \emph{opening angle}.
+        \item A smaller $\theta$ is more accurate but slower. With $\theta = 0$, no group is a point mass, and we get the direct sum.
         \item Typical values are $\theta \approx 0.5$--$1$. Exercise 2 uses $\theta = 0.5$.
         \item To find the groups quickly, we organise the particles in a tree.
       \end{itemize}
@@ -334,10 +320,54 @@
       \begin{itemize}
         \item The figure shows a quadtree, but an octree works in the same way.
         \item The root covers all the particles. Exercise 2 makes it 0.1\,\% larger than needed, so that no particle lies exactly on its edge.
-        \item The particles are inserted one at a time. A leaf that would get a second particle is divided.
+        \item The figure divides the nodes level by level. The algorithm inserts the particles one at a time, but the final tree is the same whatever the order.
         \item Dense regions get small nodes, and empty regions stay large.
         \item For evenly spread particles, the depth of the tree grows as $\log N$.
       \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}
+  \frametitle{Inserting a particle}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      Start from the root, and go down the tree:
+      \begin{enumerate}
+        \item An \textbf{empty node} gets the particle.
+        \item A \textbf{leaf with a particle} is divided into eight children. Its old particle moves to the child that contains it, and the new particle continues as in case 3.
+        \item A \textbf{node with children} passes the particle on to the child that contains it.
+      \end{enumerate}
+
+      \vspace*{2mm}
+      \begin{itemize}
+        \item Every node on the way adds one to its count of particles.
+        \item Two particles at the same position would be divided forever, so the depth of the tree is limited to \texttt{max\_depth}.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.45\textwidth}
+      \centering
+      \begin{tikzpicture}[x=1cm, y=1cm, font=\footnotesize]
+        % 1: an empty node
+        \draw (0,3.1) rectangle (1.5,4.6);
+        \fill[red] (0.95,3.75) circle[radius=2pt];
+        \node[anchor=west, align=left] at (1.75,3.85) {1. empty node};
+
+        % 2: a leaf with a particle
+        \draw (0,1.25) rectangle (1.5,2.75);
+        \draw[dashed] (0.75,1.25) -- (0.75,2.75) (0,2.0) -- (1.5,2.0);
+        \fill (0.35,2.35) circle[radius=2pt];
+        \fill[red] (1.1,1.6) circle[radius=2pt];
+        \node[anchor=west, align=left] at (1.75,2.0) {2. leaf with \\ \phantom{2. }a particle};
+
+        % 3: a node with children
+        \draw (0,-0.6) rectangle (1.5,0.9) (0.75,-0.6) -- (0.75,0.9) (0,0.15) -- (1.5,0.15);
+        \fill[orange!30] (0.77,0.17) rectangle (1.48,0.88);
+        \fill[red] (1.1,0.5) circle[radius=2pt];
+        \node[anchor=west, align=left] at (1.75,0.15) {3. node with \\ \phantom{3. }children};
+      \end{tikzpicture}
     \end{column}
   \end{columns}
 \end{frame}
@@ -385,123 +415,9 @@ type :: node
 end type node
       \end{lstlisting}
       \small
-      The eight children are allocated together, as one array, when a node is divided. The particles stay in the arrays \texttt{m} and \texttt{r}, and a leaf stores only the index of its particle.
+      The eight children are allocated together, as one array, when a node is divided. The particles stay in the particle arrays of the main program, and a leaf stores only the index of its particle.
     \end{column}
   \end{columns}
-\end{frame}
-
-
-\begin{frame}[fragile]
-  \frametitle{Which child contains a point?}
-  \begin{columns}[T]
-    \begin{column}{0.42\textwidth}
-      \centering
-      \vspace*{3mm}
-      \begin{tikzpicture}[x=1cm, y=1cm, font=\footnotesize]
-        \draw (0,0) rectangle (4,4);
-        \draw[dashed] (2,0) -- (2,4) (0,2) -- (4,2);
-        \node at (1,1) {$k = (1,1)$};
-        \node at (3,1) {$k = (2,1)$};
-        \node at (1,3) {$k = (1,2)$};
-        \fill[orange!30] (2,2) rectangle (4,4);
-        \draw (2,2) rectangle (4,4);
-        \node at (3,3.4) {$k = (2,2)$};
-        \fill (2,2) circle[radius=1.5pt] node[below left] {\texttt{centre}};
-        \fill[red] (3.3,2.6) circle[radius=2pt] node[below] {\texttt{x}};
-        \draw[decorate, decoration={brace, amplitude=4pt, mirror}] (0,-0.1) -- (4,-0.1) node[midway, below=4pt] {\texttt{size}};
-      \end{tikzpicture}
-    \end{column}
-
-    \begin{column}{0.58\textwidth}
-      \begin{lstlisting}
-pure function child_index(nd, x) result(k)
-  type(node), intent(in) :: nd
-  real(dp), intent(in) :: x(3)
-  integer :: k(3)
-  k = merge(2, 1, x > nd%centre)
-end function child_index
-      \end{lstlisting}
-      \begin{itemize}
-        \item \texttt{x > nd\%centre} compares each coordinate, and \texttt{merge} gives 2 for true and 1 for false. The child is \texttt{nd\%children(k(1), k(2), k(3))}.
-        \item The centres of the children, in \texttt{subdivide}:
-      \end{itemize}
-      \begin{lstlisting}
-nd%children(ix, iy, iz)%centre = &
-    nd%centre + ([ix, iy, iz] - 1.5_dp) * nd%size / 2
-      \end{lstlisting}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-
-\begin{frame}
-  \frametitle{Inserting a particle}
-  \begin{columns}[T]
-    \begin{column}{0.55\textwidth}
-      Start from the root, and go down the tree:
-      \begin{enumerate}
-        \item An \textbf{empty node} gets the particle.
-        \item A \textbf{leaf with a particle} is divided into eight children. Its old particle moves to the child that contains it, and the new particle continues as in case 3.
-        \item A \textbf{node with children} passes the particle on to the child that contains it.
-      \end{enumerate}
-
-      \vspace*{2mm}
-      \begin{itemize}
-        \item Every node on the way counts the particle in \texttt{n\_particles}.
-        \item Two particles at the same position would be divided forever, so the depth of the tree is limited to \texttt{max\_depth}.
-      \end{itemize}
-    \end{column}
-
-    \begin{column}{0.45\textwidth}
-      \centering
-      \begin{tikzpicture}[x=1cm, y=1cm, font=\footnotesize]
-        % 1: an empty node
-        \draw (0,3.1) rectangle (1.5,4.6);
-        \fill[red] (0.95,3.75) circle[radius=2pt];
-        \node[anchor=west, align=left] at (1.75,3.85) {1. empty node};
-
-        % 2: a leaf with a particle
-        \draw (0,1.25) rectangle (1.5,2.75);
-        \draw[dashed] (0.75,1.25) -- (0.75,2.75) (0,2.0) -- (1.5,2.0);
-        \fill (0.35,2.35) circle[radius=2pt];
-        \fill[red] (1.1,1.6) circle[radius=2pt];
-        \node[anchor=west, align=left] at (1.75,2.0) {2. leaf with \\ \phantom{2. }a particle};
-
-        % 3: a node with children
-        \draw (0,-0.6) rectangle (1.5,0.9) (0.75,-0.6) -- (0.75,0.9) (0,0.15) -- (1.5,0.15);
-        \fill[orange!30] (0.77,0.17) rectangle (1.48,0.88);
-        \fill[red] (1.1,0.5) circle[radius=2pt];
-        \node[anchor=west, align=left] at (1.75,0.15) {3. node with \\ \phantom{3. }children};
-      \end{tikzpicture}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-
-\begin{frame}[fragile]
-  \frametitle{Inserting a particle: the code}
-  \begin{lstlisting}
-recursive subroutine insert_particle(nd, i, r, depth)
-  type(node), target, intent(inout) :: nd
-  integer, intent(in) :: i, depth
-  real(dp), intent(in) :: r(:,:)
-  integer :: k(3)
-  if (nd%n_particles == 0) then
-    nd%particle = i                          ! 1. an empty node gets the particle
-  else
-    if (.not. associated(nd%children)) then  ! 2. a leaf: divide it, and move its old particle
-      if (depth >= max_depth) error stop 'Two particles are too close to each other.'
-      call subdivide(nd)
-      k = child_index(nd, r(:,nd%particle))
-      call insert_particle(nd%children(k(1), k(2), k(3)), nd%particle, r, depth + 1)
-      nd%particle = 0
-    end if
-    k = child_index(nd, r(:,i))              ! 3. pass the new particle on to its child
-    call insert_particle(nd%children(k(1), k(2), k(3)), i, r, depth + 1)
-  end if
-  nd%n_particles = nd%n_particles + 1
-end subroutine insert_particle
-  \end{lstlisting}
 \end{frame}
 
 
@@ -509,7 +425,7 @@ end subroutine insert_particle
 
 \begin{frame}
   \centering
-  \Huge \textbf{Using the Tree}
+  \Huge \textbf{Forces}
 \end{frame}
 
 
@@ -521,7 +437,7 @@ end subroutine insert_particle
         \item A leaf has the mass and position of its particle.
         \item A node with children gets its total mass $M$ and centre of mass $\mathbf{R}$ from its children $c$:
           \[ M = \sum_c M_c, \qquad \mathbf{R} = \frac{1}{M} \sum_c M_c \mathbf{R}_c. \]
-        \item The recursive call comes first, so the children are always computed before their parent.
+        \item A recursive procedure first calls itself for each child, and only then combines the results, so the children are always computed before their parent.
         \item Empty nodes have zero mass and are skipped.
       \end{itemize}
     \end{column}
@@ -557,55 +473,48 @@ end subroutine insert_particle
 
 
 \begin{frame}[fragile]
-  \frametitle{Mass and centre of mass: the code}
+  \frametitle{The pull of a point mass}
   \begin{columns}[T]
-    \begin{column}{0.47\textwidth}
-      \begin{lstlisting}
-recursive subroutine compute_masses(nd, m, r)
-  type(node), intent(inout) :: nd
-  real(dp), intent(in) :: m(:), r(:,:)
-  integer :: ix, iy, iz
-
-  if (nd%n_particles == 0) return
-
-  if (.not. associated(nd%children)) then
-    ! A leaf: the mass and position of
-    ! its particle
-    nd%mass = m(nd%particle)
-    nd%com = r(:,nd%particle)
-  else
-      \end{lstlisting}
+    \begin{column}{0.42\textwidth}
+      \begin{itemize}
+        \item Single particles and point masses pull with the same formula. A mass $m$ at the relative position $\mathbf{d}$, softened with the length $\epsilon$, gives
+          \[ \mathbf{a} = \frac{m \mathbf{d}}{(|\mathbf{d}|^2 + \epsilon^2)^{3/2}}. \]
+        \item With $\epsilon = 0$, this is Newton's gravity with $G = 1$, as in Exercise~1.
+        \item Softening keeps the pull finite when two particles pass close to each other. Exercise 2 uses $\epsilon = 0.01$.
+      \end{itemize}
     \end{column}
 
-    \begin{column}{0.53\textwidth}
+    \begin{column}{0.58\textwidth}
       \begin{lstlisting}
-    ! A node with children: sum over them
-    nd%mass = 0.0_dp
-    nd%com = 0.0_dp
-    do iz = 1, 2
-      do iy = 1, 2
-        do ix = 1, 2
-          associate (child => nd%children(ix, iy, iz))
-            call compute_masses(child, m, r)
-            nd%mass = nd%mass + child%mass
-            nd%com = nd%com + child%mass * child%com
-          end associate
-        end do
-      end do
-    end do
-    nd%com = nd%com / nd%mass
-  end if
-end subroutine compute_masses
+pure function point_mass_acceleration(mass, d) result(acc)
+  real(dp), intent(in) :: mass, d(3)
+  real(dp) :: acc(3)
+  acc = mass * d / (sum(d**2) + eps**2)**1.5_dp
+end function point_mass_acceleration
       \end{lstlisting}
+
+      \centering
+      \begin{tikzpicture}[x=1.1cm, y=1.3cm, font=\scriptsize]
+        \draw[->] (0,0) -- (4.4,0) node[right] {$|\mathbf{d}| / \epsilon$};
+        \draw[->] (0,0) -- (0,1.3) node[above] {$|\mathbf{a}|$};
+        \foreach \x in {1,2,3,4} {
+          \draw (\x,0) -- (\x,-0.05) node[below] {\x};
+        }
+        \draw[gray, dashed, domain=0.88:4, samples=60] plot (\x, {1/(\x*\x)});
+        \draw[blue, thick, domain=0:4, samples=80] plot (\x, {\x/((\x*\x + 1)^1.5)});
+        % Legend
+        \draw[gray, dashed] (2.3,1.15) -- ++(0.4,0) node[right] {$\epsilon = 0$};
+        \draw[blue, thick] (2.3,0.85) -- ++(0.4,0) node[right] {softened};
+      \end{tikzpicture}
     \end{column}
   \end{columns}
 \end{frame}
 
 
-\begin{frame}[fragile]
+\begin{frame}
   \frametitle{Walking the tree}
   \begin{columns}[T]
-    \begin{column}{0.4\textwidth}
+    \begin{column}{0.42\textwidth}
       The acceleration of particle \texttt{i} is a sum over a walk down the tree, starting from the root:
       \begin{itemize}
         \item An \textbf{empty node} adds nothing.
@@ -615,48 +524,33 @@ end subroutine compute_masses
       \end{itemize}
     \end{column}
 
-    \begin{column}{0.6\textwidth}
-      The pull of a mass $m$ at the relative position $\mathbf{d}$ is softened with the length $\epsilon$:
-      \[ \mathbf{a} = \frac{m \mathbf{d}}{(|\mathbf{d}|^2 + \epsilon^2)^{3/2}}. \]
-      Softening avoids huge accelerations when two particles pass close to each other. Exercise 2 uses $\epsilon = 0.01$.
-      \begin{lstlisting}
-pure function point_mass_acceleration(mass, d) result(acc)
-  real(dp), intent(in) :: mass, d(3)
-  real(dp) :: acc(3)
-  acc = mass * d / (sum(d**2) + eps**2)**1.5_dp
-end function point_mass_acceleration
-      \end{lstlisting}
+    \begin{column}{0.58\textwidth}
+      \centering
+      \vspace*{2mm}
+      \begin{tikzpicture}[font=\footnotesize,
+          stage/.style={draw, rounded corners=2pt, fill=gray!10, align=center, minimum width=20mm, minimum height=6mm},
+          test/.style={draw, fill=blue!10, align=center, minimum width=20mm, minimum height=6mm},
+          act/.style={draw, rounded corners=2pt, align=left, text width=37mm, minimum height=6mm},
+          lab/.style={font=\scriptsize, gray}]
+        \node[stage] (visit) at (0,0) {visit a node};
+        \node[test] (empty) at (0,-1.15) {empty?};
+        \node[test] (leaf) at (0,-2.3) {leaf?};
+        \node[test] (far) at (0,-3.45) {$s < \theta d$?};
+        \node[stage] (open) at (0,-4.6) {visit each child};
+        \node[act, anchor=west] (a1) at (1.65,-1.15) {add nothing};
+        \node[act, anchor=west] (a2) at (1.65,-2.3) {add the pull of its particle, unless it is \texttt{i}};
+        \node[act, anchor=west] (a3) at (1.65,-3.45) {add the pull of a point mass at its centre of mass};
+        \draw[->] (visit) -- (empty);
+        \draw[->] (empty) -- node[lab, right] {no} (leaf);
+        \draw[->] (leaf) -- node[lab, right] {no} (far);
+        \draw[->] (far) -- node[lab, right] {no} (open);
+        \foreach \q/\a in {empty/a1, leaf/a2, far/a3} {
+          \draw[->] (\q) -- node[lab, above] {yes} (\a);
+        }
+        \draw[->] (open.west) -- ++(-0.45,0) |- node[lab, pos=0.25, rotate=90, above] {recursion} (visit.west);
+      \end{tikzpicture}
     \end{column}
   \end{columns}
-\end{frame}
-
-
-\begin{frame}[fragile]
-  \frametitle{Walking the tree: the code}
-  \vspace*{-2mm}
-  \begin{lstlisting}
-recursive subroutine add_acceleration(nd, i, r, acc)
-  type(node), intent(in) :: nd
-  integer, intent(in) :: i
-  real(dp), intent(in) :: r(:,:)
-  real(dp), intent(inout) :: acc(3)
-  integer :: ix, iy, iz
-  if (nd%n_particles == 0) return                          ! an empty node adds nothing
-  if (.not. associated(nd%children)) then                  ! a leaf, unless it is particle i
-    if (nd%particle /= i) acc = acc + point_mass_acceleration(nd%mass, nd%com - r(:,i))
-  else if (nd%size < theta * norm2(nd%com - r(:,i))) then  ! a node far enough away
-    acc = acc + point_mass_acceleration(nd%mass, nd%com - r(:,i))
-  else                                                     ! any other node: open it
-    do iz = 1, 2
-      do iy = 1, 2
-        do ix = 1, 2
-          call add_acceleration(nd%children(ix, iy, iz), i, r, acc)
-        end do
-      end do
-    end do
-  end if
-end subroutine add_acceleration
-  \end{lstlisting}
 \end{frame}
 
 
@@ -734,11 +628,10 @@ end subroutine compute_accelerations
         \item delete the tree.
       \end{enumerate}
     \item Recursion fits trees well: inserting, computing the masses, walking, and deleting are all short recursive procedures.
-    \item The walk of each particle is independent of the others, so the walks can be shared between OpenMP threads or MPI processes.
   \end{itemize}
 
   \vspace*{2mm}
-  \textbf{Exercise 2} starts from \texttt{lectures/exercise\_2/barnes\_hut.f90}, which implements everything in this lecture.
+  \textbf{Next: Exercise 2} starts from \texttt{lectures/exercise\_2/barnes\_hut.f90}, which implements everything in this lecture. The walk of each particle is independent of the others, so in the exercise you share the particles between MPI processes.
 \end{frame}
 
 \end{document}

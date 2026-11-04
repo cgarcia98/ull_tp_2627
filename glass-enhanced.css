@@ -1,0 +1,102 @@
+/* =========================================
+   KAVITA -> STREMIO ENHANCED (V3)
+   ========================================= */
+
+/* 1. Base Theme & Fix Gray Bar */
+html, 
+body, 
+.app-container, 
+.main-wrapper,
+.content-container,
+.kavita-layout {
+    background-color: #050505 !important;
+    color: #f1f1f1 !important;
+    margin: 0 !important; /* Removes the top gray gap */
+}
+
+/* 2. Navigation Layering (Lowered so posters pop over) */
+.sidebar, 
+app-side-nav,
+.side-nav-menu,
+.top-nav,
+.navbar,
+header {
+    position: relative !important;
+    z-index: 10 !important; /* Dropped z-index so hovered cards cover them */
+    background-color: #050505 !important;
+    border: none !important; 
+    box-shadow: none !important; /* Removes any bleeding shadows from the bars */
+}
+
+/* 3. Hide ALL footer elements (Book icon, 3 dots, title) by default */
+app-card .card-footer,
+app-card .item-info,
+app-card .series-info,
+app-card .card-text {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.25s ease !important;
+}
+
+/* Reveal entire footer on hover */
+app-card:hover .card-footer,
+app-card:hover .item-info,
+app-card:hover .series-info,
+app-card:hover .card-text {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+/* 4. Format the Title (No black shadow) */
+.card-title,
+.card-title-text,
+.series-title,
+.text-truncate {
+    text-align: center !important;
+    font-size: 0.9rem !important;
+    margin-top: 8px !important;
+    color: #ffffff !important;
+    text-shadow: none !important; /* Removed the black shadow */
+}
+
+/* Hide subtitle/muted text completely */
+.card-subtitle,
+.series-subtitle,
+app-card .text-muted {
+    display: none !important;
+}
+
+/* 5. Rounded Cards & Z-Index Popping */
+app-card .card, 
+.card,
+.item-card {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 12px !important;
+    z-index: 1 !important; 
+    transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1) !important;
+    position: relative !important;
+}
+
+/* Make hovered poster massive and pop over everything */
+app-card:hover,
+.card:hover,
+app-card:focus-within {
+    transform: scale(1.15) !important;
+    z-index: 9999 !important; /* Forces it completely over the top and side bars */
+}
+
+app-card img,
+.card-img-top,
+.poster-img {
+    border-radius: 12px !important;
+    transition: box-shadow 0.25s ease !important;
+}
+
+/* 6. Universal Ambient Glow */
+app-card:hover img,
+.card:hover img {
+    /* A bright, neutral soft-white/silver glow that works universally */
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.2), 
+                0 10px 20px rgba(0, 0, 0, 0.7) !important;
+}

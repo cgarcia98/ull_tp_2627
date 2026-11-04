@@ -578,7 +578,7 @@ end function point_mass_acceleration
 \end{frame}
 
 
-\begin{frame}[fragile]
+\begin{frame}
   \frametitle{One time step}
   \begin{columns}[T]
     \begin{column}{0.45\textwidth}
@@ -591,23 +591,8 @@ end function point_mass_acceleration
     \end{column}
 
     \begin{column}{0.55\textwidth}
-      \begin{lstlisting}
-subroutine compute_accelerations(m, r, a)
-  real(dp), intent(in) :: m(:), r(:,:)
-  real(dp), intent(out) :: a(:,:)
-  type(node), pointer :: root
-  integer :: i
-
-  call build_tree(root, r)
-  call compute_masses(root, m, r)
-  do i = 1, size(m)
-    a(:,i) = 0.0_dp
-    call add_acceleration(root, i, r, a(:,i))
-  end do
-  call delete_children(root)
-  deallocate(root)
-end subroutine compute_accelerations
-      \end{lstlisting}
+      \centering
+      \input{time_step}
     \end{column}
   \end{columns}
 \end{frame}

@@ -17,9 +17,9 @@ module geometry
         real(dp) :: x, y, z
     end type point3d
 
-    ! Adding a vector to a point gives a point
+    ! Adding a vector to a point gives a point, and adding two vectors gives a vector
     interface operator(+)
-        module procedure sumvp, sumpv
+        module procedure sumvp, sumpv, sumvv
     end interface
 
     ! Point - vector gives a point, and point - point gives a vector
@@ -52,6 +52,13 @@ contains
         type(vector3d), intent(in) :: v
         sumpv = point3d(p%x + v%x, p%y + v%y, p%z + v%z)
     end function sumpv
+
+    ! Returns the vector u + v. Not required by the exercise, but the
+    ! leapfrog step needs it to add accelerations to velocities.
+    elemental type(vector3d) function sumvv(u, v)
+        type(vector3d), intent(in) :: u, v
+        sumvv = vector3d(u%x + v%x, u%y + v%y, u%z + v%z)
+    end function sumvv
 
     ! Returns the point p - v (the point p moved by the opposite of v)
     elemental type(point3d) function subpv(p, v)
@@ -86,4 +93,10 @@ contains
         real(dp), intent(in) :: r
         divvr = vector3d(v%x / r, v%y / r, v%z / r)
     end function divvr
+
+    ! Returns the distance between the points a and b
+    elemental real(dp) function distance(a, b)
+        type(point3d), intent(in) :: a, b
+        distance = sqrt((a%x - b%x)**2 + (a%y - b%y)**2 + (a%z - b%z)**2)
+    end function distance
 end module geometry

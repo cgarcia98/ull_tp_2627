@@ -27,6 +27,16 @@ module geometry
         module procedure subpv, subpp
     end interface
 
+    ! Multiplying a vector by a real gives a vector, in either order
+    interface operator(*)
+        module procedure mulrv, mulvr
+    end interface
+
+    ! Dividing a vector by a real gives a vector
+    interface operator(/)
+        module procedure divvr
+    end interface
+
 contains
 
     ! Returns the point v + p, same as p + v
@@ -50,9 +60,30 @@ contains
         subpv = point3d(p%x - v%x, p%y - v%y, p%z - v%z)
     end function subpv
 
-    ! Returns the vector a - b, which goes from the point b to the point a
+    ! Returns the vector a - b, which goes from point b to point a
     elemental type(vector3d) function subpp(a, b)
         type(point3d), intent(in) :: a, b
         subpp = vector3d(a%x - b%x, a%y - b%y, a%z - b%z)
     end function subpp
+
+    ! Returns the vector r * v
+    elemental type(vector3d) function mulrv(r, v)
+        real(dp), intent(in) :: r
+        type(vector3d), intent(in) :: v
+        mulrv = vector3d(r * v%x, r * v%y, r * v%z)
+    end function mulrv
+
+    ! Returns the vector v * r, same as r * v
+    elemental type(vector3d) function mulvr(v, r)
+        type(vector3d), intent(in) :: v
+        real(dp), intent(in) :: r
+        mulvr = mulrv(r, v)
+    end function mulvr
+
+    ! Returns the vector v / r
+    elemental type(vector3d) function divvr(v, r)
+        type(vector3d), intent(in) :: v
+        real(dp), intent(in) :: r
+        divvr = vector3d(v%x / r, v%y / r, v%z / r)
+    end function divvr
 end module geometry

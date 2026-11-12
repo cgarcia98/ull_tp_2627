@@ -22,6 +22,7 @@ program ex1
     integer :: u_in, ios, i, n
     real(dp) :: dt, dt_out, t_end
     type(particle3d), allocatable :: particles(:)
+    type(vector3d), allocatable :: a(:)   ! acceleration of each particle
 
     ! The name of the input file is the only command-line argument
     if (command_argument_count() /= 1) then
@@ -63,6 +64,10 @@ program ex1
     print '(3a, i0, a)', 'Read ', trim(input_file), ': ', n, ' particles'
     print '(3(a, es10.3))', 'dt =', dt, ', dt_out =', dt_out, ', t_end =', t_end
 
+    ! Accelerations at t = 0
+    allocate(a(n))
+    call accelerations(particles, a)
+
 contains
 
     ! error message if an I/O statement failed
@@ -74,4 +79,26 @@ contains
             stop 1
         end if
     end subroutine check_io
+
+    ! Gravitational acceleration of each particle due to all the others:
+    ! a_i = sum over j /= i of m_j (r_j - r_i) / |r_j - r_i|^3, with G = 1.
+    ! Each a(i) is summed over all j, so every pair is computed twice (once
+    ! for i and once for j), but a(i) is only written by iteration i
+    subroutine accelerations(particles, a)
+        type(particle3d), intent(in) :: particles(:)
+        type(vector3d), intent(out) :: a(:)
+        type(vector3d) :: d   ! from particle i to particle j
+        real(dp) :: r         ! distance between particles i and j
+        integer :: i, j
+
+        do i = 1, size(particles)
+            a(i) = vector3d(0.0_dp, 0.0_dp, 0.0_dp)
+            do j = 1, size(particles)
+                if (j == i) cycle
+                d = particles(j)%p - particles(i)%p
+                r = distance(particles(j)%p, particles(i)%p)
+                a(i) = a(i) + (particles(j)%m / r**3) * d
+            end do
+        end do
+    end subroutine accelerations
 end program ex1

@@ -10,6 +10,9 @@
 !   n                   number of particles
 !   m x y z vx vy vz    mass, position, and velocity (one line per particle)
 !
+! The positions are written into output.dat, in the current directory,
+! at t = 0 and then every dt_out. Each line is t p1x p1y p1z ... pnx pny pnz.
+!
 ! The units are chosen so that the gravitational constant G = 1.
 
 program ex1
@@ -19,7 +22,7 @@ program ex1
     implicit none
 
     character(len=256) :: input_file, msg
-    integer :: u_in, ios, i, n, step, n_steps
+    integer :: u_in, u_out, ios, i, n, step, n_steps, out_every
     real(dp) :: dt, dt_out, t_end
     type(particle3d), allocatable :: particles(:)
     type(vector3d), allocatable :: a(:)   ! acceleration of each particle
@@ -68,17 +71,28 @@ program ex1
     allocate(a(n))
     call accelerations(particles, a)
 
+    ! Output file, starting with the state at t = 0. The output is written
+    ! every out_every steps
+    open(newunit=u_out, file='output.dat', status='replace', action='write', iostat=ios, iomsg=msg)
+    call check_io(ios, msg, 'opening output.dat')
+    out_every = max(1, nint(dt_out / dt))
+    call write_state(u_out, 0.0_dp, particles)
+
     ! Leapfrog, kick-drift-kick. Each step starts with the accelerations
-    ! of the previous one, so the forces are computed only once per step.
-    ! dt/2 is written in parentheses because a vector can only be divided
-    ! by a real(dp), and (a * dt) / 2 would divide it by the integer 2
+    ! of the previous one, forces are computed only once per step
     n_steps = nint(t_end / dt)
     do step = 1, n_steps
         particles%v = particles%v + a * (dt/2)          ! kick: half a step
         particles%p = particles%p + particles%v * dt    ! drift: a whole step
         call accelerations(particles, a)                ! force at the new positions
         particles%v = particles%v + a * (dt/2)          ! kick: half a step
+
+        ! The time is step * dt, not a sum of dt, so no rounding errors add up
+        if (mod(step, out_every) == 0) call write_state(u_out, step * dt, particles)
     end do
+    close(u_out)
+
+    print '(a, i0, a)', 'Wrote ', n_steps / out_every + 1, ' lines into output.dat'
 
 contains
 
@@ -91,6 +105,15 @@ contains
             stop 1
         end if
     end subroutine check_io
+
+    ! Writes one line of output: the time t and the positions of all the
+    ! particles
+    subroutine write_state(u, t, particles)
+        integer, intent(in) :: u
+        real(dp), intent(in) :: t
+        type(particle3d), intent(in) :: particles(:)
+        write(u, '(es23.16, *(1x, es23.16))') t, particles%p
+    end subroutine write_state
 
     ! Gravitational acceleration of each particle due to all the others:
     ! a_i = sum over j /= i of m_j (r_j - r_i) / |r_j - r_i|^3, with G = 1.

@@ -19,7 +19,7 @@ program ex1
     implicit none
 
     character(len=256) :: input_file, msg
-    integer :: u_in, ios, i, n
+    integer :: u_in, ios, i, n, step, n_steps
     real(dp) :: dt, dt_out, t_end
     type(particle3d), allocatable :: particles(:)
     type(vector3d), allocatable :: a(:)   ! acceleration of each particle
@@ -67,6 +67,18 @@ program ex1
     ! Accelerations at t = 0
     allocate(a(n))
     call accelerations(particles, a)
+
+    ! Leapfrog, kick-drift-kick. Each step starts with the accelerations
+    ! of the previous one, so the forces are computed only once per step.
+    ! dt/2 is written in parentheses because a vector can only be divided
+    ! by a real(dp), and (a * dt) / 2 would divide it by the integer 2
+    n_steps = nint(t_end / dt)
+    do step = 1, n_steps
+        particles%v = particles%v + a * (dt/2)          ! kick: half a step
+        particles%p = particles%p + particles%v * dt    ! drift: a whole step
+        call accelerations(particles, a)                ! force at the new positions
+        particles%v = particles%v + a * (dt/2)          ! kick: half a step
+    end do
 
 contains
 

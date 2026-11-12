@@ -1,4 +1,5 @@
-# The program built by the makefile. The object files (*.o), the module
+# The programs built by the makefile. The object files (*.o), the module
 # files (*.mod), and output.dat are already ignored by the .gitignore of
 # the repository
 ex1
+ex1_omp

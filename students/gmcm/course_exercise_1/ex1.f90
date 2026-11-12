@@ -13,12 +13,18 @@
 ! The positions are written into output.dat, in the current directory,
 ! at t = 0 and then every dt_out. Each line is t p1x p1y p1z ... pnx pny pnz.
 !
+! Compiled with -fopenmp (make ex1_omp), the forces are computed in parallel,
+! with the number of threads set by OMP_NUM_THREADS:
+!
+!   OMP_NUM_THREADS=4 ./ex1_omp input.dat
+!
 ! The units are chosen so that the gravitational constant G = 1.
 
 program ex1
     use iso_fortran_env, only: error_unit
     use geometry
     use particle
+    !$ use omp_lib
     implicit none
 
     character(len=256) :: input_file, msg
@@ -66,6 +72,8 @@ program ex1
 
     print '(3a, i0, a)', 'Read ', trim(input_file), ': ', n, ' particles'
     print '(3(a, es10.3))', 'dt =', dt, ', dt_out =', dt_out, ', t_end =', t_end
+    ! Only compiled with -fopenmp: the serial program has no threads to report
+    !$ print '(a, i0)', 'OpenMP threads: ', omp_get_max_threads()
 
     ! Accelerations at t = 0
     allocate(a(n))
@@ -126,6 +134,14 @@ contains
         real(dp) :: r         ! distance between particles i and j
         integer :: i, j
 
+        ! The threads share the iterations of the loop over i. Iteration i only
+        ! writes a(i), so two threads never write the same element and there
+        ! is no race condition. Every iteration has the same amount of work,
+        ! so the static schedule (equal blocks of i) balances the threads.
+        ! Each a(i) is summed in the same order whatever the number of threads,
+        ! so the results are identical with and without OpenMP
+        !$omp parallel do default(none) shared(particles, a) private(i, j, d, r) &
+        !$omp schedule(static)
         do i = 1, size(particles)
             a(i) = vector3d(0.0_dp, 0.0_dp, 0.0_dp)
             do j = 1, size(particles)
@@ -135,5 +151,6 @@ contains
                 a(i) = a(i) + (particles(j)%m / r**3) * d
             end do
         end do
+        !$omp end parallel do
     end subroutine accelerations
 end program ex1

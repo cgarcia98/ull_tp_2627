@@ -3,6 +3,8 @@
 #   make            builds both programs: ex1 (serial) and ex1_omp (OpenMP)
 #   make run        builds ex1 and runs it with the figure-eight input
 #   make run_omp    the same with ex1_omp (threads: OMP_NUM_THREADS)
+#   make random_sphere  builds the generator of initial conditions of the
+#                   exercise (used by timing.sh)
 #   make clean      removes everything that make has built
 #
 # Another input file: make run INPUT=my_input.dat
@@ -12,6 +14,7 @@ FCFLAGS = -Wall -O2
 
 OBJECTS = geometry.o particle.o ex1.o
 INPUT = ../../../lectures/exercise_1/input.dat
+SPHERE = ../../../lectures/exercise_1/random_sphere.f90
 
 all: ex1 ex1_omp
 
@@ -42,5 +45,8 @@ run: ex1
 run_omp: ex1_omp
 	./ex1_omp $(INPUT)
 
+random_sphere: $(SPHERE)
+	$(FC) $(FCFLAGS) -o $@ $<
+
 clean:
-	rm -f *.o *.mod ex1 ex1_omp output.dat
+	rm -f *.o *.mod ex1 ex1_omp random_sphere output.dat

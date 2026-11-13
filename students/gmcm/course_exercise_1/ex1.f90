@@ -18,10 +18,13 @@
 !
 !   OMP_NUM_THREADS=4 ./ex1_omp input.dat
 !
+! At the end, the program prints the wall-clock time of the simulation
+! (the force calculations, the steps, and the output, but not the reading).
+!
 ! The units are chosen so that the gravitational constant G = 1.
 
 program ex1
-    use iso_fortran_env, only: error_unit
+    use iso_fortran_env, only: error_unit, int64
     use geometry
     use particle
     !$ use omp_lib
@@ -29,6 +32,7 @@ program ex1
 
     character(len=256) :: input_file, msg
     integer :: u_in, u_out, ios, i, n, step, n_steps, out_every
+    integer(int64) :: clock_start, clock_end, clock_rate   ! for the wall-clock time
     real(dp) :: dt, dt_out, t_end
     type(particle3d), allocatable :: particles(:)
     type(vector3d), allocatable :: a(:)   ! acceleration of each particle
@@ -75,6 +79,11 @@ program ex1
     ! Only compiled with -fopenmp: the serial program has no threads to report
     !$ print '(a, i0)', 'OpenMP threads: ', omp_get_max_threads()
 
+    ! Start the clock. system_clock measures the wall-clock time, like
+    ! omp_get_wtime, but it also exists without -fopenmp. cpu_time would
+    ! add up the time of all the threads
+    call system_clock(clock_start, clock_rate)
+
     ! Accelerations at t = 0
     allocate(a(n))
     call accelerations(particles, a)
@@ -99,8 +108,10 @@ program ex1
         if (mod(step, out_every) == 0) call write_state(u_out, step * dt, particles)
     end do
     close(u_out)
+    call system_clock(clock_end)
 
     print '(a, i0, a)', 'Wrote ', n_steps / out_every + 1, ' lines into output.dat'
+    print '(a, f12.6, a)', 'Wall time:', real(clock_end - clock_start, dp) / real(clock_rate, dp), ' s'
 
 contains
 
@@ -134,10 +145,7 @@ contains
         real(dp) :: r         ! distance between particles i and j
         integer :: i, j
 
-        ! The threads share the iterations of the loop over i. Iteration i only
-        ! writes a(i), so two threads never write the same element and there
-        ! is no race condition. Every iteration has the same amount of work,
-        ! so the static schedule (equal blocks of i) balances the threads.
+        ! The threads share the iterations of the loop over i.
         ! Each a(i) is summed in the same order whatever the number of threads,
         ! so the results are identical with and without OpenMP
         !$omp parallel do default(none) shared(particles, a) private(i, j, d, r) &

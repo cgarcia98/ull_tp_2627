@@ -99,10 +99,19 @@ program ex1
     ! of the previous one, forces are computed only once per step
     n_steps = nint(t_end / dt)
     do step = 1, n_steps
-        particles%v = particles%v + a * (dt/2)          ! kick: half a step
-        particles%p = particles%p + particles%v * dt    ! drift: a whole step
-        call accelerations(particles, a)                ! force at the new positions
-        particles%v = particles%v + a * (dt/2)          ! kick: half a step
+        ! Kick (half a step) and drift (a whole step) of every particle
+        do i = 1, n
+            particles(i)%v = particles(i)%v + a(i) * (dt / 2.0_dp)
+            particles(i)%p = particles(i)%p + particles(i)%v * dt
+        end do
+
+        ! Forces at the new positions, once all the particles have moved
+        call accelerations(particles, a)
+
+        ! Kick (half a step) with the new accelerations
+        do i = 1, n
+            particles(i)%v = particles(i)%v + a(i) * (dt / 2.0_dp)
+        end do
 
         ! The time is step * dt, not a sum of dt, so no rounding errors add up
         if (mod(step, out_every) == 0) call write_state(u_out, step * dt, particles)
